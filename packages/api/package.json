@@ -1,0 +1,27 @@
+{
+  "name": "@serverless-starter-com/serverless-starter-api",
+  "version": "0.0.1",
+  "description": "ServerlessStarter api",
+  "author": {
+    "name": "Mathieu Ledru",
+    "email": "matyo91@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/darkwood-fr/serverless-starter/issues"
+  },
+  "homepage": "https://github.com/darkwood-fr/serverless-starter/tree/master/library/serverless-starter-api#readme",
+  "keywords": [
+    "serverless-starter",
+    "serverless-starter-api"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darkwood-fr/serverless-starter.git",
+    "directory": "library/serverless-starter-api"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
+

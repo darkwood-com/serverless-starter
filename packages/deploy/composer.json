@@ -1,0 +1,8 @@
+{
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=7.2.5",
+    "bref/bref": "^0.5.29"
+  }
+}

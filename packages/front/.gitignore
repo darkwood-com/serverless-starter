@@ -1,0 +1,16 @@
+# logs
+/*.log
+
+# npm
+/node_modules
+
+# dotenv
+/.env.*
+
+# gatsby
+/.cache
+/public
+
+# typescript
+/dist
+oclif.manifest.json

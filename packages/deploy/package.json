@@ -1,0 +1,26 @@
+{
+  "name": "@serverless-starter-com/serverless-starter-deploy",
+  "version": "0.0.1",
+  "description": "ServerlessStarter deploy",
+  "author": {
+    "name": "Mathieu Ledru",
+    "email": "matyo91@gmail.com"
+  },
+  "bugs": {
+    "url": "https://github.com/darkwood-fr/serverless-starter/issues"
+  },
+  "homepage": "https://github.com/darkwood-fr/serverless-starter/tree/master/library/serverless-starter-deploy#readme",
+  "keywords": [
+    "serverless-starter",
+    "serverless-starter-deploy"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/darkwood-fr/serverless-starter.git",
+    "directory": "library/serverless-starter-deploy"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

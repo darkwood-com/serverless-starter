@@ -1,0 +1,191 @@
+service: serverless-starter
+
+custom:
+  prod:
+    front_domain: serverless-starter.com
+    api_domain: api.serverless-starter.com
+  preprod:
+    front_domain: preprod.serverless-starter.com
+    api_domain: preprod-api.serverless-starter.com
+
+provider:
+  name: aws
+  runtime: provided
+  region: eu-west-3
+  httpApi:
+    cors:
+      allowedOrigins:
+        - '*'
+      allowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+      allowedHeaders:
+        - 'Accept'
+        - 'Accept-Language'
+        - 'Access-Control-Request-Headers'
+        - 'Access-Control-Request-Method'
+        - 'Authorization'
+        - 'ServerlessStarter-Authorization'
+        - 'Content-Type'
+        - 'Origin'
+        - 'Referer'
+    payload: '2.0'
+  environment:
+    BREF_AUTOLOAD_PATH: ./pack/${opt:stage}/api/vendor/autoload.php
+
+functions:
+  api:
+    handler: ./pack/${opt:stage}/api/public/index.php
+    timeout: 28 # in seconds (API Gateway has a timeout of 29 seconds)
+    layers:
+      - ${bref:layer.php-74-fpm}
+    events:
+      - httpApi: '*'
+    package:
+      include:
+        - './pack/${opt:stage}/api/**'
+        - '!./pack/${opt:stage}/api/node_modules/**'
+        - '!./pack/${opt:stage}/api/tests/**'
+        - '!./pack/${opt:stage}/api/var/**'
+
+package:
+  individually: true
+  exclude:
+    - ./**
+
+plugins:
+  - ./vendor/bref/bref
+
+resources:
+  Resources:
+
+    FrontBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        WebsiteConfiguration:
+          IndexDocument: 'index.html'
+          ErrorDocument: 'index.html'
+
+    FrontBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref FrontBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action: s3:GetObject
+              Resource: !Join ['/', [!GetAtt FrontBucket.Arn, '*']]
+
+    ApiBucket:
+      Type: AWS::S3::Bucket
+
+    ApiBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: !Ref ApiBucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: '*'
+              Action: s3:GetObject
+              Resource: !Join ['/', [!GetAtt ApiBucket.Arn, '*']]
+
+    FrontCDN:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          PriceClass: PriceClass_100
+          HttpVersion: http2
+          Origins:
+            - Id: FrontBucket
+              DomainName: !Select [2, !Split ['/', !GetAtt FrontBucket.WebsiteURL]]
+              CustomOriginConfig:
+                OriginProtocolPolicy: 'http-only'
+          DefaultCacheBehavior:
+            TargetOriginId: FrontBucket
+            AllowedMethods: [GET, HEAD]
+            CachedMethods: [GET, HEAD]
+            ForwardedValues:
+              QueryString: 'false'
+              Cookies:
+                Forward: none
+            ViewerProtocolPolicy: redirect-to-https
+            Compress: true
+          Aliases:
+            - ${self:custom.${opt:stage}.front_domain}
+          ViewerCertificate:
+            AcmCertificateArn: arn:aws:acm:us-east-1:094932445011:certificate/13bde851-c131-4e58-87cc-889cb2bb3fe6
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2018
+
+    ApiCDN:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          PriceClass: PriceClass_100
+          HttpVersion: http2
+          Origins:
+            - Id: ApiBucket
+              DomainName: !GetAtt ApiBucket.RegionalDomainName
+              S3OriginConfig: {}
+            - Id: ApiLambda
+              DomainName: !Join ['.', [!Ref HttpApi, 'execute-api', !Ref AWS::Region, 'amazonaws.com']]
+              CustomOriginConfig:
+                OriginProtocolPolicy: 'https-only'
+          DefaultCacheBehavior:
+            AllowedMethods: [GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE]
+            TargetOriginId: ApiLambda
+            DefaultTTL: 0
+            MinTTL: 0
+            MaxTTL: 0
+            ForwardedValues:
+              QueryString: true
+              Cookies:
+                Forward: all
+              Headers:
+                - 'Accept'
+                - 'Accept-Language'
+                - 'Access-Control-Request-Headers'
+                - 'Access-Control-Request-Method'
+                - 'Authorization'
+                - 'ServerlessStarter-Authorization'
+                - 'Content-Type'
+                - 'Origin'
+                - 'Referer'
+            ViewerProtocolPolicy: redirect-to-https
+          CacheBehaviors:
+            - PathPattern: '*.*'
+              TargetOriginId: ApiBucket
+              AllowedMethods: [GET, HEAD]
+              ForwardedValues:
+                QueryString: 'false'
+                Cookies:
+                  Forward: none
+              ViewerProtocolPolicy: redirect-to-https
+              Compress: true
+          CustomErrorResponses:
+            - ErrorCode: 500
+              ErrorCachingMinTTL: 0
+            - ErrorCode: 504
+              ErrorCachingMinTTL: 0
+          Aliases:
+            - ${self:custom.${opt:stage}.api_domain}
+          ViewerCertificate:
+            AcmCertificateArn: arn:aws:acm:us-east-1:094932445011:certificate/13bde851-c131-4e58-87cc-889cb2bb3fe6
+            SslSupportMethod: sni-only
+            MinimumProtocolVersion: TLSv1.2_2018
+
+  Outputs:
+    FrontBucketOutput:
+      Description: Name of the bucket that stores the static website.
+      Value: !Ref FrontBucket
+    ApiBucketOutput:
+      Description: Name of the bucket that stores the static website.
+      Value: !Ref ApiBucket
+    FrontCDNOutput:
+      Description: CloudFront domain name.
+      Value: !GetAtt FrontCDN.DomainName
+    ApiCDNOutput:
+      Description: CloudApi domain name.
+      Value: !GetAtt ApiCDN.DomainName
